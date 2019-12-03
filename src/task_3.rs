@@ -10,36 +10,6 @@ struct Coordinate {
     y: i32,
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Debug)]
-enum Path {
-    Straight(Coordinate),
-    Intersection(Coordinate),
-}
-
-impl Path {
-    fn coordinate(&self) -> &Coordinate {
-        match self {
-            Path::Straight(c) => c,
-            Path::Intersection(c) => c,
-        }
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Debug)]
-struct PathLength {
-    path: Path,
-    length: usize,
-}
-
-impl PathLength {
-    fn new(path: Path) -> Self {
-        PathLength {
-            path,
-            length: std::usize::MAX,
-        }
-    }
-}
-
 impl Coordinate {
     fn distance(&self, from: &Coordinate) -> usize {
         let x = self.x - from.x;
@@ -132,57 +102,6 @@ impl Route {
         }
         result
     }
-
-    fn trace(&self, from: &Coordinate) -> Vec<PathLength> {
-        let path = self.coordinates(from);
-        let mut result = vec![];
-
-        println!("Tracing");
-        for p in &path {
-            result.push(PathLength::new(
-                if path.iter().filter(|i| i == &p).nth(1).is_some() {
-                    Path::Intersection(p.clone())
-                } else {
-                    Path::Straight(p.clone())
-                },
-            ));
-        }
-
-        println!("Stepping");
-
-        Self::step(1, 0, &mut result);
-
-        result
-    }
-
-    fn step(step: usize, position: usize, result: &mut Vec<PathLength>) {
-        if result.len() > position {
-            if result[position].length > step {
-                result[position].length = step;
-                match &result[position].path {
-                    Path::Straight(_) => Self::step(
-                        step + 1,
-                        position + 1,
-                        // if up { position + 1 } else { position - 1 },
-                        result,
-                        // up,
-                    ),
-                    Path::Intersection(_) => Self::step(step + 1, position + 1, result),
-                    // c => {
-                    // let positions = result
-                    //     .iter()
-                    //     .enumerate()
-                    //     .filter_map(|i| if &i.1.path == c { Some(i.0) } else { None })
-                    //     .collect::<Vec<usize>>();
-                    // for pos in positions {
-                    //     Self::step(step + 1, pos + 1, result);
-                    // Self::step(step + 1, pos - 1, result, false);
-                    // }
-                    // }
-                }
-            }
-        }
-    }
 }
 
 impl FromIterator<PathDirection> for Route {
@@ -264,28 +183,22 @@ pub fn run_e() {
         .map(|(k, _)| k)
         .collect::<Vec<Coordinate>>();
 
-    println!("Intersections evaluated");
-    let paths = routes
-        .iter()
-        .map(|route| route.trace(&Coordinate::new()))
-        .collect::<Vec<Vec<PathLength>>>();
-
-    println!("Lengths evaluated");
-
     let result = intersections
         .iter()
-        .map(|c| {
-            paths
+        .map(|intersection| {
+            routes
                 .iter()
-                .map(|p| {
-                    p.iter()
-                        .find(|pl: &&PathLength| pl.path.coordinate() == c)
+                .map(|route| {
+                    route
+                        .coordinates(&Coordinate::new())
+                        .iter()
+                        .enumerate()
+                        .map(|(i, coord)| (i + 1, coord))
+                        .find_map(|(i, coord)| if coord == intersection { Some(i) } else { None })
                         .unwrap()
                 })
-                .map(|p| p.length)
                 .sum::<usize>()
         })
-        .inspect(|l| println!("Found length: {}", l))
         .min()
         .unwrap();
 
