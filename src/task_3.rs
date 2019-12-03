@@ -150,33 +150,35 @@ impl Route {
 
         println!("Stepping");
 
-        Self::step(1, 0, &mut result, true);
+        Self::step(1, 0, &mut result);
 
         result
     }
 
-    fn step(step: usize, position: usize, result: &mut Vec<PathLength>, up: bool) {
+    fn step(step: usize, position: usize, result: &mut Vec<PathLength>) {
         if result.len() > position {
             if result[position].length > step {
                 result[position].length = step;
                 match &result[position].path {
                     Path::Straight(_) => Self::step(
                         step + 1,
-                        if up { position + 1 } else { position - 1 },
+                        position + 1,
+                        // if up { position + 1 } else { position - 1 },
                         result,
-                        up,
+                        // up,
                     ),
-                    c => {
-                        let positions = result
-                            .iter()
-                            .enumerate()
-                            .filter_map(|i| if &i.1.path == c { Some(i.0) } else { None })
-                            .collect::<Vec<usize>>();
-                        for pos in positions {
-                            Self::step(step + 1, pos + 1, result, true);
-                            Self::step(step + 1, pos - 1, result, false);
-                        }
-                    }
+                    Path::Intersection(_) => Self::step(step + 1, position + 1, result),
+                    // c => {
+                    // let positions = result
+                    //     .iter()
+                    //     .enumerate()
+                    //     .filter_map(|i| if &i.1.path == c { Some(i.0) } else { None })
+                    //     .collect::<Vec<usize>>();
+                    // for pos in positions {
+                    //     Self::step(step + 1, pos + 1, result);
+                    // Self::step(step + 1, pos - 1, result, false);
+                    // }
+                    // }
                 }
             }
         }
