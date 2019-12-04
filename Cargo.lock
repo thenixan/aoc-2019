@@ -3,4 +3,14 @@
 [[package]]
 name = "aoc-2019"
 version = "0.1.0"
+dependencies = [
+ "iterslide 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
+[[package]]
+name = "iterslide"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum iterslide 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "bb811b7daf2582ecb3e0d7e231029722a0d02267dc59bca31d6d464f687662e1"
