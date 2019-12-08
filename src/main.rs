@@ -1,11 +1,14 @@
 use std::env;
 
+mod opcodes;
+
 mod task_1;
 mod task_2;
 mod task_3;
 mod task_4;
 mod task_5;
 mod task_6;
+mod task_7;
 
 fn main() {
     let arg = env::args().nth(1);
@@ -25,6 +28,8 @@ fn main() {
                 "5e" => task_5::run_e(),
                 "6" => task_6::run(),
                 "6e" => task_6::run_e(),
+                "7" => task_7::run(),
+                "7e" => task_7::run_e(),
                 _ => println!("Unresolved task"),
             };
         }
