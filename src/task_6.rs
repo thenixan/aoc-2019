@@ -1,59 +1,54 @@
-use crate::nodes::Node;
-use std::cell::RefCell;
-use std::collections::VecDeque;
+use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::iter::FromIterator;
-use std::rc::Rc;
+use std::io::{BufReader, Read};
 use std::str::FromStr;
 
-#[derive(Eq, PartialEq)]
-struct Orbiting(String);
+struct PlanetarySystem(HashMap<String, Vec<String>>);
 
-impl FromStr for Orbiting {
+impl PlanetarySystem {
+    fn count_length(&self, from: &str, counter: usize) -> usize {
+        let target = self.0.get(from);
+        if let Some(target) = target {
+            target
+                .iter()
+                .map(|t| self.count_length(t, counter + 1) + counter + 1)
+                .sum::<usize>()
+        } else {
+            0
+        }
+    }
+}
+
+impl FromStr for PlanetarySystem {
     type Err = ();
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Orbiting(s.to_string()))
+        let mut result = HashMap::new();
+        s.lines()
+            .map(|l| l.split(")").collect::<Vec<&str>>())
+            .for_each(|l| {
+                result
+                    .entry(l[0].to_string())
+                    .or_insert(vec![])
+                    .push(l[1].to_string());
+            });
+        Ok(PlanetarySystem(result))
     }
 }
 
 pub fn run() {
     let input = File::open("input/task_6").unwrap();
-    let input = BufReader::new(input);
+    let mut input = BufReader::new(input);
 
-    let mut v = input
-        .lines()
-        .filter_map(|l| l.ok())
-        .map(|l| {
-            l.split(")")
-                .filter_map(|s| s.parse::<Orbiting>().ok())
-                .map(|s| Node::new(s))
-                .collect::<Vec<Node<Orbiting>>>()
-        })
-        .map(move |n| {
-            let mut left = n[0];
-            left += n[1];
-            left
-        })
-        .collect::<Vec<Node<Orbiting>>>();
+    let mut buffer = String::new();
 
-    while !v.is_empty() {
-        let mut i = 0;
-        while i < v.len() {
-            let mut j = i + 1;
-            while j < v.len() {
-                if v[0].value() == v[1].value() {
-                    v[0] += v[1];
-                    v.remove(1);
-                } else {
-                    j += 1;
-                }
-            }
-            i += 1;
-        }
-    }
+    input.read_to_string(&mut buffer).unwrap();
 
-    println!("Result: {}", v.len());
+    let system = buffer.parse::<PlanetarySystem>().unwrap();
+
+    let result = system.count_length("COM", 0);
+
+    println!("Result: {}", result)
 }
 
 pub fn run_e() {}
