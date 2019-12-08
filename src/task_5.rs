@@ -1,4 +1,4 @@
-use crate::opcodes::{Opcode, Programm};
+use crate::opcodes::Programm;
 use std::fs::File;
 use std::io::{BufReader, Read};
 

@@ -1,5 +1,4 @@
 use crate::opcodes::Programm;
-use std::collections::VecDeque;
 use std::fs::File;
 use std::io::{BufReader, Read};
 
@@ -22,7 +21,6 @@ impl ProgrammSet {
             let r = programm.run(&mut acc);
             let p = if acc.len() >= 1 { acc.len() - 1 } else { 0 };
             acc.insert(p, r[0]);
-            println!("acc: {:?}", acc);
             acc
         })[0]
     }
@@ -31,7 +29,6 @@ impl ProgrammSet {
         let mut inp = input.iter().map(|v| v + 5).collect::<Vec<i32>>();
         let mut outputs = vec![0];
         let mut finished = vec![false; self.p.len()];
-        println!("acc: {:?}", inp);
         let mut i = 0;
         loop {
             let mut v = vec![];
@@ -41,7 +38,6 @@ impl ProgrammSet {
             if let Some(input) = inp.pop() {
                 v.push(input);
             }
-            println!("Acc: {:?}", v);
             let mut r = self.p[i].run(&mut v);
             finished[i] = self.p[i].is_finished();
 
