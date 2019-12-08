@@ -9,6 +9,7 @@ mod task_4;
 mod task_5;
 mod task_6;
 mod task_7;
+mod task_8;
 
 fn main() {
     let arg = env::args().nth(1);
@@ -30,6 +31,8 @@ fn main() {
                 "6e" => task_6::run_e(),
                 "7" => task_7::run(),
                 "7e" => task_7::run_e(),
+                "8" => task_8::run(),
+                "8e" => task_8::run_e(),
                 _ => println!("Unresolved task"),
             };
         }
