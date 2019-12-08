@@ -17,6 +17,23 @@ impl PlanetarySystem {
             0
         }
     }
+
+    fn length_to_target(&self, from: &str, obj: &str) -> Option<usize> {
+        let target = self.0.get(from);
+        if let Some(target) = target {
+            if target.iter().any(|l| l == obj) {
+                Some(1)
+            } else {
+                target
+                    .iter()
+                    .filter_map(|t| self.length_to_target(t, obj))
+                    .map(|c| c + 1)
+                    .min()
+            }
+        } else {
+            None
+        }
+    }
 }
 
 impl FromStr for PlanetarySystem {
@@ -51,4 +68,29 @@ pub fn run() {
     println!("Result: {}", result)
 }
 
-pub fn run_e() {}
+pub fn run_e() {
+    let input = File::open("input/task_6").unwrap();
+    let mut input = BufReader::new(input);
+
+    let mut buffer = String::new();
+
+    input.read_to_string(&mut buffer).unwrap();
+
+    let system = buffer.parse::<PlanetarySystem>().unwrap();
+
+    let result = system
+        .0
+        .keys()
+        .filter_map(|k| {
+            let left = system.length_to_target(k, "YOU");
+            let right = system.length_to_target(k, "SAN");
+            match (left, right) {
+                (Some(l), Some(r)) => Some(l + r),
+                _ => None,
+            }
+        })
+        .min()
+        .map(|v| v - 2);
+
+    println!("Result: {}", result.unwrap())
+}
