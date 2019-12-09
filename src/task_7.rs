@@ -13,7 +13,7 @@ impl ProgrammSet {
         }
     }
 
-    fn run(&mut self, input: Vec<i32>) -> i32 {
+    fn run(&mut self, input: Vec<i64>) -> i64 {
         let mut i = input.clone();
         i.insert(i.len() - 1, 0);
         println!("acc: {:?}", i);
@@ -25,8 +25,8 @@ impl ProgrammSet {
         })[0]
     }
 
-    fn run_with_loopback(&mut self, input: Vec<i32>) -> i32 {
-        let mut inp = input.iter().map(|v| v + 5).collect::<Vec<i32>>();
+    fn run_with_loopback(&mut self, input: Vec<i64>) -> i64 {
+        let mut inp = input.iter().map(|v| v + 5).collect::<Vec<i64>>();
         let mut outputs = vec![0];
         let mut finished = vec![false; self.p.len()];
         let mut i = 0;
@@ -63,7 +63,7 @@ impl InputGenerator {
         InputGenerator { count, pos: 0 }
     }
 
-    fn distinct(v: &Vec<i32>) -> bool {
+    fn distinct(v: &Vec<i64>) -> bool {
         for i in 0..v.len() {
             if v.iter()
                 .enumerate()
@@ -78,15 +78,15 @@ impl InputGenerator {
 }
 
 impl Iterator for InputGenerator {
-    type Item = Vec<i32>;
+    type Item = Vec<i64>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.pos == 5_usize.pow(self.count as u32) {
             None
         } else {
-            let mut result = vec![0_i32; self.count];
+            let mut result = vec![0_i64; self.count];
             for i in 0..self.count {
-                let a = (self.pos as i32 % 5_i32.pow(self.count as u32 - i as u32)) as i32;
-                let b = (a / 5_i32.pow(self.count as u32 - i as u32 - 1)) as i32;
+                let a = (self.pos as i64 % 5_i64.pow(self.count as u32 - i as u32)) as i64;
+                let b = (a / 5_i64.pow(self.count as u32 - i as u32 - 1)) as i64;
                 result[i] = b;
             }
             self.pos += 1;
