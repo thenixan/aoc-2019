@@ -3,6 +3,7 @@ use std::env;
 mod opcodes;
 
 mod task_1;
+mod task_10;
 mod task_2;
 mod task_3;
 mod task_4;
@@ -36,6 +37,8 @@ fn main() {
                 "8e" => task_8::run_e(),
                 "9" => task_9::run(),
                 "9e" => task_9::run_e(),
+                "10" => task_10::run(),
+                "10e" => task_10::run_e(),
                 _ => println!("Unresolved task"),
             };
         }
