@@ -8,94 +8,131 @@ mod asteroids {
     use std::ops::Mul;
     use std::ops::Sub;
 
-    struct StepGenerator {
+    struct PrimalIterator {
+        to: usize,
+        current: usize,
+    }
+
+    impl PrimalIterator {
+        fn new(to: usize) -> Self {
+            PrimalIterator { to, current: 0 }
+        }
+    }
+
+    impl Iterator for PrimalIterator {
+        type Item = usize;
+        fn next(&mut self) -> Option<Self::Item> {
+            self.current += 1;
+            if self.current > self.to {
+                None
+            } else {
+                while self.to % self.current != 0 {
+                    self.current += 1;
+                }
+                Some(self.current)
+            }
+        }
+    }
+
+    struct PerimeterIterator {
         width: usize,
         height: usize,
         current_x: usize,
         current_y: usize,
-        counter: usize,
+        finished: usize,
     }
 
-    impl StepGenerator {
-        fn is_primal(v: usize) -> bool {
-            if v == 0 || v == 1 {
-                true
-            } else {
-                !(2..v).any(|a| v % a == 0)
-            }
-        }
-
-        fn should_skip(x: usize, y: usize) -> bool {
-            if x == y && x != 1 {
-                true
-            } else if x == 0 && y != 1 {
-                true
-            } else if x != 1 && y == 0 {
-                true
-            } else if !Self::is_primal(x) && !Self::is_primal(y) {
-                true
-            } else {
-                false
+    impl PerimeterIterator {
+        fn new(width: usize, height: usize) -> Self {
+            PerimeterIterator {
+                width,
+                height,
+                current_y: 0,
+                current_x: 0,
+                finished: 0,
             }
         }
     }
 
-    impl Iterator for StepGenerator {
+    impl Iterator for PerimeterIterator {
         type Item = Coordinate;
         fn next(&mut self) -> Option<Self::Item> {
-            let mut result = None;
-            while result.is_none() && self.current_y != self.height {
-                if self.current_x == self.width {
-                    self.current_x = 0;
-                    self.current_y += 1;
-                }
-                if !Self::should_skip(self.current_x, self.current_y) {
-                    result = match self.counter {
-                        0 => Some(Coordinate::new(
-                            self.current_x as i32,
-                            self.current_y as i32,
-                        )),
-                        1 => {
-                            if self.current_x == 0 {
-                                None
-                            } else {
-                                Some(Coordinate::new(
-                                    -(self.current_x as i32),
-                                    self.current_y as i32,
-                                ))
-                            }
-                        }
-                        2 => {
-                            if self.current_y == 0 {
-                                None
-                            } else {
-                                Some(Coordinate::new(
-                                    self.current_x as i32,
-                                    -(self.current_y as i32),
-                                ))
-                            }
-                        }
-                        _ => {
-                            if self.current_x == 0 && self.current_y == 0 {
-                                None
-                            } else {
-                                Some(Coordinate::new(
-                                    -(self.current_x as i32),
-                                    -(self.current_y as i32),
-                                ))
-                            }
-                        }
+            let result = if self.finished == 4 {
+                None
+            } else {
+                Some(Coordinate::new(
+                    self.current_x as i32,
+                    self.current_y as i32,
+                ))
+            };
+            if self.finished == 0 && self.current_x == self.width - 1 {
+                self.finished = 1;
+            }
+            if self.finished == 0 {
+                self.current_x += 1;
+            }
+            if self.finished == 1 && self.current_y == self.height - 1 {
+                self.finished = 2;
+            }
+            if self.finished == 1 {
+                self.current_y += 1;
+            }
+            if self.finished == 2 && self.current_x == 0 {
+                self.finished = 3;
+            }
+            if self.finished == 2 {
+                self.current_x -= 1;
+            }
+            if self.finished == 3 && self.current_y == 0 {
+                self.finished = 4;
+            }
+            if self.finished == 3 {
+                self.current_y -= 1;
+            }
+            result
+        }
+    }
+
+    struct CoordinateStepIterator<'a> {
+        from: &'a Coordinate,
+        to: &'a Coordinate,
+        primal_iterator: PrimalIterator,
+    }
+
+    impl<'a> CoordinateStepIterator<'a> {
+        fn new(from: &'a Coordinate, to: &'a Coordinate) -> Self {
+            let d_x = (from.0 - to.0).abs();
+            let d_y = (from.1 - to.1).abs();
+            let d = std::cmp::max(d_x, d_y) as usize;
+            CoordinateStepIterator {
+                from,
+                to,
+                primal_iterator: PrimalIterator::new(d),
+            }
+        }
+    }
+
+    impl<'a> Iterator for CoordinateStepIterator<'a> {
+        type Item = Coordinate;
+        fn next(&mut self) -> Option<Self::Item> {
+            while let Some(p) = self.primal_iterator.next() {
+                if (self.from.0 - self.to.0) % p as i32 == 0
+                    && (self.from.1 - self.to.1) % p as i32 == 0
+                {
+                    let x = if self.from.0 > self.to.0 {
+                        -(self.from.0 - self.to.0) / p as i32
+                    } else {
+                        (self.to.0 - self.from.0) / p as i32
                     };
-                }
-                if self.counter == 3 {
-                    self.counter = 0;
-                    self.current_x += 1;
-                } else {
-                    self.counter += 1;
+                    let y = if self.from.1 > self.to.1 {
+                        -(self.from.1 - self.to.1) / p as i32
+                    } else {
+                        (self.to.1 - self.from.1) / p as i32
+                    };
+                    return Some(Coordinate::new(self.from.0 + x, self.from.1 + y));
                 }
             }
-            println!("R: {:?}", result);
-            result
+            None
         }
     }
 
@@ -105,6 +142,10 @@ mod asteroids {
     impl Coordinate {
         fn new(x: i32, y: i32) -> Self {
             Coordinate(x, y)
+        }
+
+        fn steps_to<'a>(&'a self, other: &'a Coordinate) -> CoordinateStepIterator<'a> {
+            CoordinateStepIterator::new(self, other)
         }
     }
 
@@ -133,28 +174,22 @@ mod asteroids {
         layout: Vec<Coordinate>,
         width: usize,
         height: usize,
-        primes: Vec<Coordinate>,
+        perimeter: Vec<Coordinate>,
     }
 
     impl Map {
         fn new(map: Vec<Coordinate>, width: usize, height: usize) -> Self {
-            let primes = Self::steps(width, height).collect::<Vec<_>>();
+            let perimeter = Self::perimeter(width, height).collect::<Vec<_>>();
             Map {
                 layout: map,
                 width,
                 height,
-                primes,
+                perimeter,
             }
         }
 
-        fn steps(width: usize, height: usize) -> StepGenerator {
-            StepGenerator {
-                width: width,
-                height: height,
-                current_x: 0,
-                current_y: 0,
-                counter: 0,
-            }
+        fn perimeter(width: usize, height: usize) -> PerimeterIterator {
+            PerimeterIterator::new(width, height)
         }
 
         pub fn coordinates(&self) -> &Vec<Coordinate> {
@@ -174,21 +209,49 @@ mod asteroids {
 
         pub fn visible_at(&self, coordinate: &Coordinate) -> usize {
             let log = coordinate.0 == 3 && coordinate.1 == 4;
-            self.primes
+            let on_top = coordinate.1 == 0;
+            let on_bottom = coordinate.1 as usize == self.height - 1;
+            let on_left = coordinate.0 == 0;
+            let on_right = coordinate.0 as usize == self.width - 1;
+
+            if log {
+                println!(
+                    "T: {}, B: {}, L: {}, R: {}",
+                    on_top, on_bottom, on_left, on_right
+                );
+            }
+
+            self.perimeter
                 .iter()
                 .filter(|c| {
-                    let mut moved = coordinate + c;
-                    while self.is_valid(&moved) {
-                        if self.layout.contains(&moved) {
-                            if log {
-                                println!("{:?}", moved);
-                            }
-                            return true;
-                        } else {
-                            moved = &moved + c;
-                        }
+                    let mut result = true;
+                    if on_top && c.1 == 0 && c.0 != 0 && c.0 as usize != self.width - 1 {
+                        result = false;
                     }
-                    false
+                    if on_left && c.0 == 0 && c.1 != 0 && c.1 as usize != self.height - 1 {
+                        result = false;
+                    }
+                    if on_right
+                        && c.0 as usize == self.width - 1
+                        && c.1 != 0
+                        && c.1 as usize != self.height - 1
+                    {
+                        result = false;
+                    }
+                    if on_bottom
+                        && c.1 as usize == self.height - 1
+                        && c.0 != 0
+                        && c.0 as usize != self.width - 1
+                    {
+                        result = false;
+                    }
+                    result
+                })
+                .filter_map(|c| coordinate.steps_to(c).find(|m| self.layout.contains(&m)))
+                .inspect(|c| {
+                    if log {
+                        println!("P: {},{}", c.0, c.1);
+                    }
                 })
                 .count()
         }
@@ -210,7 +273,7 @@ mod asteroids {
                 }
             }
 
-            Map::new(map, width, height)
+            Map::new(map, width + 1, height + 1)
         }
     }
 }
