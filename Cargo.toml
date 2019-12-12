@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 iterslide = "1.0.1"
 termion = "1.5.4"
+gif = "0.10.3"
