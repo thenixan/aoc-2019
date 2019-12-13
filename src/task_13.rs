@@ -25,12 +25,13 @@ impl Coordinate {
 }
 
 struct ArcadeCabinet {
+    programm: Programm,
     layout: HashMap<Coordinate, Object>,
 }
 
 impl ArcadeCabinet {
-    fn fill_layout(&mut self, p: &mut Programm) {
-        let mut iter = p.run(&mut Vec::new()).into_iter();
+    fn fill_layout(&mut self) {
+        let mut iter = self.programm.run(&mut Vec::new()).into_iter();
         while let Some(x) = iter.next() {
             if let Some(y) = iter.next() {
                 if let Some(o) = iter.next().map(|o| match o {
@@ -61,12 +62,10 @@ impl ArcadeCabinet {
 impl FromStr for ArcadeCabinet {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut result: ArcadeCabinet = ArcadeCabinet {
+        Ok(ArcadeCabinet {
+            programm: s.parse().unwrap(),
             layout: HashMap::new(),
-        };
-        let mut programm: Programm = s.parse().unwrap();
-        result.fill_layout(&mut programm);
-        Ok(result)
+        })
     }
 }
 
@@ -76,8 +75,9 @@ pub fn run() {
     let mut buffer = String::new();
     input.read_to_string(&mut buffer).unwrap();
 
-    let cabinet: ArcadeCabinet = buffer.parse().unwrap();
+    let mut cabinet: ArcadeCabinet = buffer.parse().unwrap();
 
+    cabinet.fill_layout();
     let result = cabinet.count_blocks();
     println!("Result: {}", result);
 }

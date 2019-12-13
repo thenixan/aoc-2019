@@ -164,6 +164,10 @@ impl Programm {
     pub fn is_finished(&self) -> bool {
         self.is_finished
     }
+    pub fn alter(&mut self, position: usize, value: i64) {
+        self.code[position] = value;
+    }
+
     pub fn run(&mut self, inputs: &mut Vec<i64>) -> Vec<i64> {
         let mut result = vec![];
 
