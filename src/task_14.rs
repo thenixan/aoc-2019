@@ -94,14 +94,37 @@ mod fuel_factory {
             result
         }
 
-        pub fn evaluate(&self) -> usize {
+        pub fn evaluate_reversed(&self, available: usize) -> usize {
+            let mut result = available / self.evaluate(1);
+
+            let mut addition = 10_usize.pow(0);
+            while result / addition != 0 {
+                addition *= 10;
+            }
+            addition /= 10;
+
+            while addition != 1 {
+                if available >= self.evaluate(result + addition / 2) {
+                    result += addition / 2;
+                }
+                addition /= 2;
+            }
+
+            if available < self.evaluate(result + addition) {
+                result + addition - 1
+            } else {
+                result + addition
+            }
+        }
+
+        pub fn evaluate(&self, target: usize) -> usize {
             let sorted = self.sorted_reactions();
 
             let current_level = *sorted.values().max().unwrap_or(&0);
 
             let mut available_items = vec![];
             for (key, _) in sorted.iter().filter(|s| s.1 == &current_level) {
-                available_items.push(ElementUnit::new(key.clone(), 1));
+                available_items.push(ElementUnit::new(key.clone(), target));
             }
             while !available_items
                 .iter()
@@ -159,9 +182,21 @@ pub fn run() {
         .filter_map(|l| l.parse::<Reaction>().ok())
         .collect();
 
-    let result = input.evaluate();
+    let result = input.evaluate(1);
 
     println!("Result: {}", result)
 }
 
-pub fn run_e() {}
+pub fn run_e() {
+    let input = File::open("input/task_14").unwrap();
+    let input = BufReader::new(input);
+    let input: ReactionSet = input
+        .lines()
+        .filter_map(|l| l.ok())
+        .filter_map(|l| l.parse::<Reaction>().ok())
+        .collect();
+
+    let result = input.evaluate_reversed(1_000_000_000_000);
+
+    println!("Result: {}", result)
+}
