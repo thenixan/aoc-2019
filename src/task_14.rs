@@ -5,22 +5,21 @@ use std::io::{BufRead, BufReader};
 mod fuel_factory {
     use std::collections::HashMap;
     use std::iter::FromIterator;
-    use std::ops::Add;
     use std::ops::Mul;
     use std::str::FromStr;
 
     #[derive(Clone, Debug)]
-    struct ElementUnit {
+    pub struct ElementUnit {
         quantity: usize,
         element: String,
     }
 
     impl ElementUnit {
-        fn suitable(&self, available: &HashMap<String, usize>) -> usize {
-            available
-                .get(&self.element)
-                .map(|r| r / self.quantity)
-                .unwrap_or(0)
+        pub fn new(name: String, quantity: usize) -> Self {
+            ElementUnit {
+                quantity,
+                element: name,
+            }
         }
     }
 
@@ -51,23 +50,6 @@ mod fuel_factory {
         }
     }
 
-    impl Reaction {
-        fn suitable(&self, available: &HashMap<String, usize>) -> usize {
-            self.from
-                .iter()
-                .map(|e| e.suitable(available))
-                .min()
-                .unwrap_or(0)
-        }
-
-        fn apply(&self, available: &mut HashMap<String, usize>) {
-            for e in &self.from {
-                *available.entry(e.element.clone()).or_insert(0) -= e.quantity;
-            }
-            *available.entry(self.to.element.clone()).or_insert(0) += self.to.quantity;
-        }
-    }
-
     impl FromStr for Reaction {
         type Err = ();
         fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -89,51 +71,73 @@ mod fuel_factory {
     }
 
     impl ReactionSet {
-        pub fn len(&self) -> usize {
-            self.reactions.len()
-        }
-
-        pub fn evaluate(&self) -> usize {
-            let target = self.find_path("FUEL");
-            let mut required = target.from.clone();
-            let mut result = 0;
-            println!("Set: {:?}", required);
-            while !required.is_empty() {
-                if required.iter().all(|r| r.element == "ORE") {
-                    while !required.is_empty() {
-                        result += required.pop().unwrap().quantity;
-                    }
-                } else {
-                    let r = required.pop().unwrap();
-                    if r.element == "ORE" {
-                        required.insert(0, r);
-                    } else {
-                        let t = self.find_path(&r.element);
-                        let mut q = t.clone();
-                        let mut i = 2;
-                        while q.to.quantity < r.quantity {
-                            q = t * i;
-                            i += 1;
-                        }
-                        for i in q.from {
-                            if let Some(s) = required.iter_mut().find(|r| r.element == i.element) {
-                                s.quantity += i.quantity;
-                            } else {
-                                required.insert(0, i)
-                            }
-                        }
+        fn sorted_reactions(&self) -> HashMap<String, usize> {
+            let mut result = HashMap::new();
+            result.insert("ORE".to_string(), 0);
+            while !result.contains_key("FUEL") {
+                let level = result.iter().map(|r| *r.1).max().unwrap() + 1;
+                let mut changes = HashMap::new();
+                for reaction in &self.reactions {
+                    if !result.contains_key(&reaction.to.element)
+                        && reaction
+                            .from
+                            .iter()
+                            .all(|r| result.contains_key(&r.element))
+                    {
+                        changes.insert(reaction.to.element.clone(), level);
                     }
                 }
-                println!("Set: {:?}", required);
+                for c in changes {
+                    result.insert(c.0, c.1);
+                }
             }
             result
         }
 
-        fn find_path(&self, target: &str) -> &Reaction {
-            self.reactions
+        pub fn evaluate(&self) -> usize {
+            let sorted = self.sorted_reactions();
+
+            let current_level = *sorted.values().max().unwrap_or(&0);
+
+            let mut available_items = vec![];
+            for (key, _) in sorted.iter().filter(|s| s.1 == &current_level) {
+                available_items.push(ElementUnit::new(key.clone(), 1));
+            }
+            while !available_items
                 .iter()
-                .find(|r| r.to.element == target)
-                .unwrap()
+                .map(|item| sorted[&item.element])
+                .all(|level| level == 0)
+            {
+                available_items.sort_by(|l, r| sorted[&l.element].cmp(&sorted[&r.element]));
+                let element = available_items.pop().unwrap();
+                let reaction = self
+                    .reactions
+                    .iter()
+                    .find(|r| r.to.element == element.element)
+                    .unwrap()
+                    .clone();
+                let mut mltplr = element.quantity / reaction.to.quantity;
+                if element.quantity % reaction.to.quantity != 0 {
+                    mltplr += 1;
+                }
+                for f in reaction.from {
+                    if let Some((i, e)) = available_items
+                        .iter()
+                        .enumerate()
+                        .find(|i| i.1.element == f.element)
+                        .map(|(i, e)| (i, e.clone()))
+                    {
+                        available_items.remove(i);
+                        available_items.push(ElementUnit::new(
+                            f.element,
+                            e.quantity + f.quantity * mltplr,
+                        ));
+                    } else {
+                        available_items.push(ElementUnit::new(f.element, f.quantity * mltplr));
+                    }
+                }
+            }
+            available_items.iter().map(|e| e.quantity).sum()
         }
     }
 
