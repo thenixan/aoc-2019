@@ -1,5 +1,6 @@
 use crate::opcodes::Programm;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::iter::Iterator;
@@ -37,6 +38,68 @@ enum ContentInTime {
 
 struct OxygenInMaze {
     layout: HashMap<Coordinate, ContentInTime>,
+}
+
+impl Display for OxygenInMaze {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        let mut result = String::new();
+        result += format!(
+            "{cursor}{clear}{goto}{white}",
+            cursor = termion::cursor::Hide,
+            clear = termion::clear::All,
+            goto = termion::cursor::Goto(1, 1),
+            white = termion::color::Fg(termion::color::Reset),
+        )
+        .as_str();
+        let min_x = self.layout.iter().map(|(k, _)| k.0).min().unwrap();
+        let max_x = self.layout.iter().map(|(k, _)| k.0).max().unwrap();
+        let min_y = self.layout.iter().map(|(k, _)| k.1).min().unwrap();
+        let max_y = self.layout.iter().map(|(k, _)| k.1).max().unwrap();
+
+        let max_time = self
+            .layout
+            .iter()
+            .filter_map(|(_, v)| match v {
+                ContentInTime::Target => Some(0),
+                ContentInTime::Nothing(Some(v)) => Some(*v),
+                _ => None,
+            })
+            .max()
+            .unwrap();
+
+        for y in min_y..=max_y {
+            let mut l = String::new();
+            for x in min_x..=max_x {
+                let coordinate = Coordinate(x, y);
+                l += match self.layout.get(&coordinate) {
+                    Some(ContentInTime::Wall) => format!(
+                        "{gray}█",
+                        gray = termion::color::Fg(termion::color::LightBlack)
+                    ),
+                    Some(ContentInTime::Target) => {
+                        format!("{red}█", red = termion::color::Fg(termion::color::Red))
+                    }
+                    Some(ContentInTime::Nothing(Some(v))) => {
+                        if v == &max_time {
+                            format!(
+                                "{color}█",
+                                color = termion::color::Fg(termion::color::White)
+                            )
+                        } else {
+                            format!("{color}█", color = termion::color::Fg(termion::color::Blue))
+                        }
+                    }
+                    _ => format!(" "),
+                }
+                .as_str();
+            }
+            result += l.as_str();
+            result.push('\n');
+        }
+
+        writeln!(f, "{}", result)
+    }
 }
 
 impl Iterator for OxygenInMaze {
@@ -100,7 +163,7 @@ impl Iterator for OxygenInMaze {
                 }
             }
         }
-        println!("{}: {:?}", max, changed);
+        println!("{}", self);
         if !changed.is_empty() {
             Some(max + 1)
         } else {
@@ -156,8 +219,7 @@ impl Maze {
             if maze.layout.contains_key(&coord) {
                 continue;
             }
-            let r = programm.run(&mut vec![i]);
-            let r = r[0];
+            let r = programm.run(&mut vec![i])[0];
             if r == 0 {
                 maze.layout.insert(coord.clone(), Content::Wall);
             // do nothing and stop
@@ -184,6 +246,13 @@ impl Maze {
             } else {
                 maze.layout.insert(coord.clone(), Content::Target);
                 this_min = Some(1);
+                let j = match i {
+                    1 => 2,
+                    2 => 1,
+                    3 => 4,
+                    _ => 3,
+                };
+                programm.run(&mut vec![j]);
             }
         }
         this_min
@@ -212,6 +281,6 @@ pub fn run_e() {
     let mut maze = Maze::new();
     Maze::run(&mut maze, &mut programm, &Coordinate::start(), None);
 
-    let result = maze.fill_with_oxygen().count();
+    let result = maze.fill_with_oxygen().max().unwrap();
     println!("Result: {}", result);
 }
