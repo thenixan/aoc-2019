@@ -12,7 +12,7 @@ impl Message {
     fn repeated(&mut self, times: usize) {
         self.data = self.data.repeat(times);
     }
-    fn key_for(item: i32, iteration: usize, position: usize, size: usize) -> i32 {
+    fn key_for(item: i32, iteration: usize, position: usize) -> i32 {
         let p = ((position + 1) / (iteration + 1)) % 4;
         match p {
             1 => item,
@@ -23,17 +23,28 @@ impl Message {
 
     fn encode(&mut self) {
         let size = self.data.len();
-        self.data = std::iter::repeat(self.data.clone())
-            .take(size)
+        self.data = self
+            .data
+            .iter()
+            .cycle()
+            .take(size * size)
             .enumerate()
-            .map(|(position, data)| {
-                data.into_iter()
-                    .enumerate()
-                    .map(|i| Message::key_for(i.1, position, i.0, size))
-                    .sum()
+            .map(|(position, item)| (position / size, position % size, item))
+            .map(|(iteration, position, item)| {
+                (iteration, Message::key_for(*item, iteration, position))
             })
-            .map(|item: i32| item % 10)
-            .map(|item: i32| item.abs())
+            .fold(vec![], |mut acc, (iteration, item)| {
+                let v = if iteration == acc.len() {
+                    0
+                } else {
+                    acc.pop().unwrap()
+                };
+                acc.push(v + item);
+                acc
+            })
+            .into_iter()
+            .map(|i| i % 10)
+            .map(|i| i.abs())
             .collect();
     }
 }
