@@ -12,6 +12,30 @@ impl Message {
     fn repeated(&mut self, times: usize) {
         self.data = self.data.repeat(times);
     }
+    fn key_for(item: i32, iteration: usize, position: usize, size: usize) -> i32 {
+        let p = ((position + 1) / (iteration + 1)) % 4;
+        match p {
+            1 => item,
+            3 => -item,
+            _ => 0,
+        }
+    }
+
+    fn encode(&mut self) {
+        let size = self.data.len();
+        self.data = std::iter::repeat(self.data.clone())
+            .take(size)
+            .enumerate()
+            .map(|(position, data)| {
+                data.into_iter()
+                    .enumerate()
+                    .map(|i| Message::key_for(i.1, position, i.0, size))
+                    .sum()
+            })
+            .map(|item: i32| item % 10)
+            .map(|item: i32| item.abs())
+            .collect();
+    }
 }
 
 impl FromStr for Message {
@@ -30,34 +54,8 @@ impl FromStr for Message {
 struct Phase {}
 
 impl Phase {
-    fn key_for(item: i32, iteration: usize, position: usize, size: usize) -> i32 {
-        let p = ((position + 1) / (iteration + 1)) % 4;
-        match p {
-            1 => item,
-            3 => -item,
-            _ => 0,
-        }
-    }
-
     fn run_transmission(message: Message) -> PhaseIterator {
         PhaseIterator { message }
-    }
-
-    fn encode(message: &Message) -> Message {
-        let size = message.data.len();
-        let result = std::iter::repeat(message.data.clone())
-            .take(size)
-            .enumerate()
-            .map(|(position, data)| {
-                data.into_iter()
-                    .enumerate()
-                    .map(|i| Phase::key_for(i.1, position, i.0, size))
-                    .sum()
-            })
-            .map(|item: i32| item % 10)
-            .map(|item: i32| item.abs())
-            .collect();
-        Message { data: result }
     }
 }
 
@@ -68,8 +66,7 @@ struct PhaseIterator {
 impl Iterator for PhaseIterator {
     type Item = Message;
     fn next(&mut self) -> Option<Self::Item> {
-        let result = Phase::encode(&self.message);
-        self.message = result;
+        self.message.encode();
         Some(self.message.clone())
     }
 }
