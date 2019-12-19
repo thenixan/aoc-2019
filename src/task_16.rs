@@ -27,41 +27,31 @@ impl FromStr for Message {
     }
 }
 
-struct Phase {
-    data: Vec<i32>,
-}
+struct Phase {}
 
 impl Phase {
-    fn new(data: Vec<i32>) -> Self {
-        Phase { data }
-    }
-
-    fn key_for(&self, position: usize, size: usize) -> Vec<i32> {
-        self.data
-            .iter()
-            .flat_map(|m| std::iter::repeat(*m).take(position))
-            .cycle()
-            .skip(1)
-            .take(size)
-            .collect()
-    }
-
-    fn run_transmission(&self, message: Message) -> PhaseIterator {
-        PhaseIterator {
-            phase: self,
-            message,
+    fn key_for(item: i32, iteration: usize, position: usize, size: usize) -> i32 {
+        let p = ((position + 1) / (iteration + 1)) % 4;
+        match p {
+            1 => item,
+            3 => -item,
+            _ => 0,
         }
     }
 
-    fn encode(&self, message: &Message) -> Message {
+    fn run_transmission(message: Message) -> PhaseIterator {
+        PhaseIterator { message }
+    }
+
+    fn encode(message: &Message) -> Message {
         let size = message.data.len();
         let result = std::iter::repeat(message.data.clone())
             .take(size)
             .enumerate()
             .map(|(position, data)| {
                 data.into_iter()
-                    .zip(self.key_for(position + 1, size))
-                    .map(|(l, r)| l * r)
+                    .enumerate()
+                    .map(|i| Phase::key_for(i.1, position, i.0, size))
                     .sum()
             })
             .map(|item: i32| item % 10)
@@ -71,15 +61,14 @@ impl Phase {
     }
 }
 
-struct PhaseIterator<'a> {
-    phase: &'a Phase,
+struct PhaseIterator {
     message: Message,
 }
 
-impl<'a> Iterator for PhaseIterator<'a> {
+impl Iterator for PhaseIterator {
     type Item = Message;
     fn next(&mut self) -> Option<Self::Item> {
-        let result = self.phase.encode(&self.message);
+        let result = Phase::encode(&self.message);
         self.message = result;
         Some(self.message.clone())
     }
@@ -93,9 +82,7 @@ pub fn run() {
     input.read_to_string(&mut buffer).unwrap();
 
     let message = buffer.parse::<Message>().unwrap();
-    let phase = Phase::new(vec![0, 1, 0, -1]);
-    let result = phase
-        .run_transmission(message)
+    let result = Phase::run_transmission(message)
         .take(100)
         .last()
         .unwrap()
@@ -121,9 +108,7 @@ pub fn run_e() {
     println!("Offset: {}", offset);
     let mut message = buffer.parse::<Message>().unwrap();
     message.repeated(10_000);
-    let phase = Phase::new(vec![0, 1, 0, -1]);
-    let result = phase
-        .run_transmission(message)
+    let result = Phase::run_transmission(message)
         .take(100)
         .enumerate()
         .inspect(|(i, _)| println!("Running: {}", i))
