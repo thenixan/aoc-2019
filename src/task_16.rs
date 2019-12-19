@@ -21,6 +21,20 @@ impl Message {
         }
     }
 
+    fn encode_fast(&mut self) {
+        let mut result: Vec<i32> = Vec::new();
+        while let Some(i) = self.data.pop() {
+            if let Some(m) = result.pop() {
+                result.push(m);
+                result.push(((m + i) % 10).abs());
+            } else {
+                result.push((i % 10).abs());
+            }
+        }
+        result.reverse();
+        self.data = result;
+    }
+
     fn encode(&mut self) {
         let size = self.data.len();
         self.data = self
@@ -65,19 +79,32 @@ impl FromStr for Message {
 struct Phase {}
 
 impl Phase {
-    fn run_transmission(message: Message) -> PhaseIterator {
-        PhaseIterator { message }
+    fn run_transmission(message: Message, offset: usize) -> PhaseIterator {
+        let fast = offset > message.data.len() / 2;
+        let m = if offset == 0 {
+            message
+        } else {
+            Message {
+                data: message.data.into_iter().skip(offset).collect(),
+            }
+        };
+        PhaseIterator { message: m, fast }
     }
 }
 
 struct PhaseIterator {
     message: Message,
+    fast: bool,
 }
 
 impl Iterator for PhaseIterator {
     type Item = Message;
     fn next(&mut self) -> Option<Self::Item> {
-        self.message.encode();
+        if !self.fast {
+            self.message.encode();
+        } else {
+            self.message.encode_fast();
+        }
         Some(self.message.clone())
     }
 }
@@ -90,7 +117,7 @@ pub fn run() {
     input.read_to_string(&mut buffer).unwrap();
 
     let message = buffer.parse::<Message>().unwrap();
-    let result = Phase::run_transmission(message)
+    let result = Phase::run_transmission(message, 0)
         .take(100)
         .last()
         .unwrap()
@@ -113,19 +140,16 @@ pub fn run_e() {
 
     let offset = buffer.clone()[0..7].parse::<usize>().unwrap();
 
-    println!("Offset: {}", offset);
     let mut message = buffer.parse::<Message>().unwrap();
     message.repeated(10_000);
-    let result = Phase::run_transmission(message)
+    let result = Phase::run_transmission(message, offset)
         .take(100)
         .enumerate()
-        .inspect(|(i, _)| println!("Running: {}", i))
         .map(|(_, v)| v)
         .last()
         .unwrap()
         .data
         .iter()
-        .skip(offset)
         .take(8)
         .fold("".to_string(), |mut acc, i| {
             acc += format!("{}", i).as_str();
