@@ -25,7 +25,6 @@ struct Layout {
 
 impl Layout {
     fn item_in(&self, x: usize, y: usize) -> &Object {
-        println!("{},{}", x, y);
         &self.content[y][x]
     }
 
@@ -57,7 +56,7 @@ impl FromStr for Layout {
         let mut result = vec![];
         let mut y = 0;
         let mut width = 0;
-        for l in s.lines() {
+        for l in s.trim().lines() {
             result.push(vec![]);
             let mut x = 0;
             for c in l.chars() {
@@ -74,7 +73,6 @@ impl FromStr for Layout {
             width = std::cmp::max(x, width);
             y += 1;
         }
-        println!("{}x{}", width, y);
         Ok(Layout {
             width,
             height: y,
@@ -103,9 +101,6 @@ pub fn run() {
     for y in 0..layout.height {
         for x in 0..layout.width {
             let item = layout.item_in(x, y);
-            if y <= 10 {
-                println!("Scaffold at {},{}", x, y);
-            }
             if item == &Object::Scaffold
                 && item == layout.item_bottom(x, y)
                 && item == layout.item_up(x, y)
